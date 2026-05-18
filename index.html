@@ -5,100 +5,133 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Multiplayer Tic-Tac-Toe</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f4f8;
-            display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; color: #333;
-        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; color: #333; }
         h1 { font-size: 3rem; margin-bottom: 5px; }
-        .role-text { font-size: 1.2rem; color: #888; margin-bottom: 20px; font-weight: bold; }
-        .status { font-size: 1.5rem; margin-bottom: 30px; color: #555; font-weight: 600; }
         
-        .board {
-            display: grid; grid-template-columns: repeat(3, 120px); grid-template-rows: repeat(3, 120px); gap: 12px;
-            background-color: #2d3748; padding: 15px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-        }
-        .cell {
-            background-color: #ffffff; border-radius: 8px; display: flex; align-items: center; justify-content: center;
-            font-size: 5rem; font-weight: bold; cursor: pointer; transition: background-color 0.2s, transform 0.1s;
-        }
+        /* Lobby Styles */
+        #lobby { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
+        input { font-size: 1.5rem; padding: 10px; width: 120px; text-align: center; letter-spacing: 3px; border: 2px solid #ccc; border-radius: 8px; margin-bottom: 15px;}
+        button { padding: 10px 20px; font-size: 1.1rem; font-weight: bold; background-color: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; transition: background-color 0.2s; margin: 5px;}
+        button:hover { background-color: #2563eb; }
+        .generate-btn { background-color: #8b5cf6; }
+        .generate-btn:hover { background-color: #7c3aed; }
+        
+        /* Game Styles (Hidden initially) */
+        #gameArea { display: none; flex-direction: column; align-items: center; }
+        .room-display { font-size: 1.2rem; background: #e2e8f0; padding: 5px 15px; border-radius: 20px; margin-bottom: 15px; font-weight: bold; letter-spacing: 2px;}
+        .role-text { font-size: 1.2rem; color: #888; margin-bottom: 10px; font-weight: bold; }
+        .status { font-size: 1.5rem; margin-bottom: 20px; color: #555; font-weight: 600; }
+        .board { display: grid; grid-template-columns: repeat(3, 100px); grid-template-rows: repeat(3, 100px); gap: 10px; background-color: #2d3748; padding: 12px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
+        .cell { background-color: #ffffff; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 4rem; font-weight: bold; cursor: pointer; transition: background-color 0.2s; }
         .cell:hover { background-color: #e2e8f0; }
         .cell.x { color: #ef4444; } 
         .cell.o { color: #3b82f6; } 
-
-        .reset-btn {
-            margin-top: 40px; padding: 12px 24px; font-size: 1.2rem; font-weight: bold;
-            background-color: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer;
-        }
+        .reset-btn { margin-top: 30px; background-color: #10b981; }
         .reset-btn:hover { background-color: #059669; }
     </style>
 </head>
 <body>
 
     <h1>Tic-Tac-Toe</h1>
-    <div class="role-text" id="roleText">Connecting to server...</div>
-    <div class="status" id="status">Waiting for game data...</div>
     
-    <div class="board" id="board">
-        <div class="cell" data-index="0"></div><div class="cell" data-index="1"></div><div class="cell" data-index="2"></div>
-        <div class="cell" data-index="3"></div><div class="cell" data-index="4"></div><div class="cell" data-index="5"></div>
-        <div class="cell" data-index="6"></div><div class="cell" data-index="7"></div><div class="cell" data-index="8"></div>
+    <div id="lobby">
+        <p>Enter a 5-digit code to join a game:</p>
+        <input type="text" id="roomInput" maxlength="5" placeholder="12345" autocomplete="off"><br>
+        <button id="joinBtn">Join Game</button>
+        <hr style="margin: 20px 0; border: 1px solid #eee;">
+        <p>Or create a new private room:</p>
+        <button class="generate-btn" id="generateBtn">Generate Random Code</button>
     </div>
 
-    <button class="reset-btn" id="resetBtn">Restart Game</button>
+    <div id="gameArea">
+        <div class="room-display" id="roomDisplay">Room: -----</div>
+        <div class="role-text" id="roleText">Connecting...</div>
+        <div class="status" id="status">Waiting for data...</div>
+        
+        <div class="board" id="board">
+            <div class="cell" data-index="0"></div><div class="cell" data-index="1"></div><div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div><div class="cell" data-index="4"></div><div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div><div class="cell" data-index="7"></div><div class="cell" data-index="8"></div>
+        </div>
+        <button class="reset-btn" id="resetBtn">Restart Game</button>
+    </div>
 
     <script>
+        // DOM Elements
+        const lobby = document.getElementById('lobby');
+        const gameArea = document.getElementById('gameArea');
+        const roomInput = document.getElementById('roomInput');
+        const roomDisplay = document.getElementById('roomDisplay');
         const cells = document.querySelectorAll('.cell');
         const statusText = document.getElementById('status');
         const roleText = document.getElementById('roleText');
         
+        let ws;
         let myRole = "Spectator";
         let isMyTurn = false;
 
-        // Automatically connect to the WebSocket endpoint of the server hosting this page
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+        // --- Lobby Logic ---
+        document.getElementById('generateBtn').addEventListener('click', () => {
+            const randomCode = Math.floor(10000 + Math.random() * 90000).toString();
+            roomInput.value = randomCode;
+        });
 
-        // 1. Listen for messages from the server
-        ws.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-            
-            myRole = data.role;
-            roleText.innerText = `You are playing as: ${myRole}`;
-
-            if (data.players_connected < 2) {
-                statusText.innerText = "Waiting for an opponent to join...";
+        document.getElementById('joinBtn').addEventListener('click', () => {
+            const code = roomInput.value.trim();
+            if (code.length === 5 && !isNaN(code)) {
+                connectToRoom(code);
             } else {
-                isMyTurn = (data.current_turn === myRole);
-                statusText.innerText = isMyTurn ? "It's your turn!" : `Waiting for Player ${data.current_turn}...`;
+                alert("Please enter a valid 5-digit number.");
             }
+        });
 
-            // Update the board UI
-            data.board.forEach((val, index) => {
-                const cell = cells[index];
-                cell.innerText = val;
-                cell.className = 'cell'; // Reset classes
-                if (val === "X") cell.classList.add('x');
-                if (val === "O") cell.classList.add('o');
-            });
-            
-            checkWinLocally(data.board); // Just for displaying the win message
-        };
+        // --- Game Logic ---
+        function connectToRoom(roomCode) {
+            // Hide lobby, show game
+            lobby.style.display = 'none';
+            gameArea.style.display = 'flex';
+            roomDisplay.innerText = `Room: ${roomCode}`;
 
-        // 2. Send a move to the server
+            // Connect to WebSocket with the specific room code in the URL
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws/${roomCode}`);
+
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                
+                myRole = data.role;
+                roleText.innerText = `You are playing as: ${myRole}`;
+
+                if (data.players_connected < 2) {
+                    statusText.innerText = "Waiting for an opponent to join...";
+                } else {
+                    isMyTurn = (data.current_turn === myRole);
+                    statusText.innerText = isMyTurn ? "It's your turn!" : `Waiting for Player ${data.current_turn}...`;
+                }
+
+                data.board.forEach((val, index) => {
+                    const cell = cells[index];
+                    cell.innerText = val;
+                    cell.className = 'cell';
+                    if (val === "X") cell.classList.add('x');
+                    if (val === "O") cell.classList.add('o');
+                });
+                
+                checkWinLocally(data.board);
+            };
+        }
+
         cells.forEach(cell => {
             cell.addEventListener('click', (e) => {
                 const index = e.target.getAttribute('data-index');
-                // Only allow click if it's your turn and the spot is empty
                 if (isMyTurn && e.target.innerText === "") {
                     ws.send(JSON.stringify({ action: "move", index: parseInt(index), player: myRole }));
                 }
             });
         });
 
-        // 3. Reset the game
         document.getElementById('resetBtn').addEventListener('click', () => {
-            ws.send(JSON.stringify({ action: "reset" }));
+            if(ws) ws.send(JSON.stringify({ action: "reset" }));
         });
 
         function checkWinLocally(board) {
